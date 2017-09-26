@@ -1,0 +1,143 @@
+##version 6 is cleaned for checking
+
+##this code does 2 separate processes
+##first, it downloads the first page of responses from the API
+##second, it downloads all the subsequent pages until it gets to 2013
+##I broke this up because the format of the first page is different than the subsequent pages
+
+from urllib2 import urlopen
+from json import load 
+import json, re, os, sys, requests
+import openpyxl
+import time, datetime
+
+
+key = '1438551159549358|BKa-ZBwRR8YbVdXPE45FHU2y9W4'
+
+pagetitle = 'bbcearth' ##change accordingly
+
+wb = openpyxl.load_workbook('fb_posts_list_blank.xlsx')
+sheet = wb.get_sheet_by_name('Sheet1')
+
+
+## to download first page of API responses##
+
+
+url = 'https://graph.facebook.com/' + pagetitle + '?fields=id,name,posts,release_date&access_token=' + key + '&limit=25'
+
+
+
+page = 1
+print url
+response = urlopen(url)
+json_obj = load(response)
+w = json_obj
+a = 0
+b = 0
+while b != 1:
+    print "page is " + str(page)
+    try: 
+        gotdata = w["posts"]["data"][a]
+    except IndexError:
+        break
+    c = a + 1
+    rownum = c + 1
+    sheet.cell(row=rownum, column=1).value = pagetitle
+    sheet.cell(row=rownum, column=2).value = page
+    print "post number " + str(c)
+    sheet.cell(row=rownum, column=3).value = c
+    sheet.cell(row=rownum, column=4).value = w["posts"]["data"][a]["id"]
+    if 'name' in w["posts"]["data"][a]:
+        sheet.cell(row=rownum, column=5).value = w["posts"]["data"][a]["name"]
+    else: 
+        sheet.cell(row=rownum, column=5).value = "no name"
+    if 'story' in w["posts"]["data"][a]:
+        sheet.cell(row=rownum, column=6).value = w["posts"]["data"][a]["story"]
+    else: 
+        sheet.cell(row=rownum, column=6).value = "no story"
+    if 'message' in w["posts"]["data"][a]:
+        sheet.cell(row=rownum, column=7).value = w["posts"]["data"][a]["message"]
+    else: 
+        sheet.cell(row=rownum, column=7).value = "no message"
+    if 'created_time' in w["posts"]["data"][a]:
+        createddate = w["posts"]["data"][a]["created_time"]
+        sheet.cell(row=rownum, column=8).value = createddate
+        year = createddate[0:4]
+        month = createddate[5:7]
+        day = createddate[8:10]
+        print "year is " + year 
+        sheet.cell(row=rownum, column=9).value = year
+        print "month is " + month
+        sheet.cell(row=rownum, column=10).value = month
+        print "day is " + day
+        sheet.cell(row=rownum, column=11).value = day
+    a = a + 1
+    sheet.cell(row=rownum, column=12).value =datetime.datetime.now()
+    wb.save('fb_posts_list_' + pagetitle + '_2014_to_2017.xlsx')
+next = w["posts"]["paging"]["next"]
+time.sleep(3) 
+url = next
+
+
+
+##once above is complete, run this to get all subsequent pages
+
+a = 0
+b = 0
+page = 2
+year = 9999
+rownum = rownum + 1
+
+
+while year > 2013:
+    print url
+    a = 0
+    response = urlopen(url)
+    json_obj = load(response)
+    w = json_obj
+    while b != 1:
+        print "page " + str(page)
+        try: 
+            gotdata = w["data"][a]
+        except IndexError:
+            break
+        c = a + 1
+        sheet.cell(row=rownum, column=1).value = pagetitle
+        sheet.cell(row=rownum, column=2).value = page
+        sheet.cell(row=rownum, column=3).value = c
+        sheet.cell(row=rownum, column=4).value = w["data"][a]["id"]
+        if 'name' in w["data"][a]:
+            sheet.cell(row=rownum, column=5).value = w["data"][a]["name"]
+        else: 
+            sheet.cell(row=rownum, column=5).value = "no name"
+        if 'story' in w["data"][a]:
+            sheet.cell(row=rownum, column=6).value = w["data"][a]["story"]
+        else: 
+            sheet.cell(row=rownum, column=6).value = "no story"
+        if 'message' in w["data"][a]:
+            sheet.cell(row=rownum, column=7).value = w["data"][a]["message"]
+        else: 
+            sheet.cell(row=rownum, column=7).value = "no message"
+        if 'created_time' in w["data"][a]:
+            createddate = w["data"][a]["created_time"]
+            sheet.cell(row=rownum, column=8).value = createddate
+            year = createddate[0:4]
+            sheet.cell(row=rownum, column=9).value = year
+            year = int(year)
+            month = createddate[5:7]
+            sheet.cell(row=rownum, column=10).value = month
+            day = createddate[8:10]
+            sheet.cell(row=rownum, column=11).value = day
+            print "year is " + str(year) 
+            print "month is " + month
+            print "day is " + day
+        a = a + 1
+        sheet.cell(row=rownum, column=12).value =datetime.datetime.now()
+        rownum = rownum + 1
+    next = w["paging"]["next"]
+    url = next
+    page = page + 1
+    wb.save('fb_posts_list_' + pagetitle + '_2014_to_2017.xlsx')
+    time.sleep(1)
+print "done"
+
